@@ -1,38 +1,32 @@
 import express from "express";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import cors from "cors";
 
-dotenv.config(); // Load environment variables
+dotenv.config();
 
 const app = express();
-const PORT = 5000;
+app.use(cors());
+app.use(express.json({ limit: "50mb" }));
 
-// Middleware to parse JSON request body
-app.use(express.json());
-
-// Email sending route
 app.post("/send-email", async (req, res) => {
   const { to, subject, text, filename, fileurl } = req.body;
-
-  // Validate input
   if (!to || !subject || !text) {
     return res.status(400).json({ error: "Required fields: to, subject, text" });
   }
 
-  // Configure the email transporter
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT,
-    secure: true, // Use SSL
+    secure: true,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
   });
 
-  // Prepare email options
   const mailOptions = {
-    from: process.env.SMTP_USER, // Sender email address
+    from: process.env.SMTP_USER,
     to,
     subject,
     html: `
@@ -44,18 +38,11 @@ app.post("/send-email", async (req, res) => {
     `,
   };
 
-  // Add attachments if provided
   if (filename && fileurl) {
-    mailOptions.attachments = [
-      {
-        filename: filename,
-        path: fileurl,
-      },
-    ];
+    mailOptions.attachments = [{ filename, path: fileurl }];
   }
 
   try {
-    // Send the email
     await transporter.sendMail(mailOptions);
     res.status(200).json({ message: "Email sent successfully." });
   } catch (error) {
@@ -64,10 +51,6 @@ app.post("/send-email", async (req, res) => {
   }
 });
 
-app.get("/welcome",async (req, res) =>{
-    return "Welcome to backend"
-})
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+app.get("/welcome", (req, res) => res.send("Welcome to backend"));
+
+export default app;
